@@ -12,6 +12,7 @@ const money = (n, sign = false) => {
 
 const WIN_QUIPS = ['HOO-RAY!', 'OWL YEAH!', 'WISE MOVE!', 'KA-CHING!', 'NICE HOOT!'];
 const LOSE_QUIPS = ['OUCH!', 'WHOOPS!', 'HOOT NO!', 'YIKES!', 'OH NO!'];
+const RIGHT_OFFSET = 8;
 
 let candles = [];
 let state = newState();
@@ -45,7 +46,7 @@ const chart = createChart($('chart'), {
     timeVisible: true,
     secondsVisible: false,
     barSpacing: CONFIG.barSpacing,
-    rightOffset: 8,
+    rightOffset: RIGHT_OFFSET,
     shiftVisibleRangeOnNewBar: false,
   },
   handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
@@ -80,7 +81,6 @@ const series = chart.addCandlestickSeries({
 
 const current = () => candles[state.index - 1];
 let candleRaf = 0;
-let scrollTarget = null;
 let priceView = null;
 
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -124,11 +124,15 @@ function ensureHistory() {
 
 function fillTimeScale() {
   const ts = chart.timeScale();
-  ts.applyOptions({ barSpacing: CONFIG.barSpacing, rightOffset: 8, shiftVisibleRangeOnNewBar: false });
+  ts.applyOptions({ barSpacing: CONFIG.barSpacing, rightOffset: RIGHT_OFFSET, shiftVisibleRangeOnNewBar: false });
   const visible = neededBars();
   const from = Math.max(0, state.index - visible);
-  scrollTarget = { from: from - 0.15, to: state.index + 7 };
-  ts.setVisibleLogicalRange(scrollTarget);
+  const last = Math.max(0, state.index - 1);
+  ts.setVisibleLogicalRange({ from: from - 0.15, to: last + RIGHT_OFFSET });
+}
+
+function placeLiveCandle(gap) {
+  chart.timeScale().scrollToPosition(gap, false);
 }
 
 function popLiveGlow() {
@@ -159,18 +163,13 @@ function updateLiveGlow(visual) {
 
 function animateCandle(target) {
   cancelAnimationFrame(candleRaf);
-  const ts = chart.timeScale();
-  if (scrollTarget) ts.setVisibleLogicalRange(scrollTarget);
-
-  const prevRange = ts.getVisibleLogicalRange();
   const prev = candles[state.index - 2];
   const fromClose = prev ? prev.close : target.open;
   series.update({ time: target.time, open: target.open, high: target.open, low: target.open, close: fromClose });
-  if (prevRange) ts.setVisibleLogicalRange(prevRange);
+  // New bars eat one slot of right margin. Put that slot back from a fixed
+  // offset so a tick that ends early cannot shrink the gap over time.
+  placeLiveCandle(RIGHT_OFFSET - 1);
 
-  const startFrom = prevRange?.from ?? Math.max(0, state.index - neededBars());
-  const startTo = prevRange?.to ?? state.index + 7;
-  scrollTarget = { from: startFrom + 1, to: startTo + 1 };
   const startPrice = priceView || targetPriceRange({ ...target, close: fromClose, high: fromClose, low: fromClose });
   const endPrice = targetPriceRange(target) || startPrice;
 
@@ -188,12 +187,12 @@ function animateCandle(target) {
       priceView = { min: lerp(startPrice.min, dest.min, t), max: lerp(startPrice.max, dest.max, t) };
     }
     series.update(visual);
-    ts.setVisibleLogicalRange({ from: startFrom + t, to: startTo + t });
+    placeLiveCandle((RIGHT_OFFSET - 1) + t);
     updateLiveGlow(visual);
     if (t < 1) candleRaf = requestAnimationFrame(run);
     else {
       series.update(target);
-      ts.setVisibleLogicalRange(scrollTarget);
+      placeLiveCandle(RIGHT_OFFSET);
       snapPriceView(target);
       updateLiveGlow(target);
     }
