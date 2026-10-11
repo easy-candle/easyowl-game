@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <title>EasyOwl — Don't blow the nest!</title>
+  <link rel="icon" href="owl.png" type="image/png" />
+  <link rel="apple-touch-icon" href="owl.png" />
+  <link rel="canonical" href="https://game.easycandle.app/" />
+  <meta name="theme-color" content="#1a0b3c" />
+  <meta name="description" content="A silly money-management game. Guard the nest egg with 1% risk — and see how long it lasts." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="EasyOwl" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:url" content="https://game.easycandle.app/" />
+  <meta property="og:title" content="EasyOwl — Don't blow the nest!" />
+  <meta property="og:description" content="A silly money-management game. Guard the nest egg with 1% risk — and see how long it lasts." />
+  <meta property="og:image" content="https://game.easycandle.app/og.webp" />
+  <meta property="og:image:secure_url" content="https://game.easycandle.app/og.webp" />
+  <meta property="og:image:type" content="image/webp" />
+  <meta property="og:image:width" content="1672" />
+  <meta property="og:image:height" content="941" />
+  <meta property="og:image:alt" content="EasyOwl — Don't blow the nest!" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="EasyOwl — Don't blow the nest!" />
+  <meta name="twitter:description" content="A silly money-management game. Guard the nest egg with 1% risk — and see how long it lasts." />
+  <meta name="twitter:image" content="https://game.easycandle.app/og.webp" />
+  <meta name="twitter:image:alt" content="EasyOwl — Don't blow the nest!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <div class="sky" aria-hidden="true">
+      <span class="moon"></span>
+      <span class="star s1"></span>
+      <span class="star s2"></span>
+      <span class="star s3"></span>
+      <span class="star s4"></span>
+      <span class="star s5"></span>
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+    </div>
+
+    <header class="hud">
+      <div class="brand">
+        <div class="owl-head" aria-hidden="true">
+          <img src="owl.png" alt="" />
+        </div>
+        <div class="brand-text">
+          <h1>EasyOwl</h1>
+          <p>Don't blow the nest!</p>
+        </div>
+      </div>
+      <div class="tools">
+        <button id="btnPlay" class="icon-btn" type="button" aria-label="Pause" title="Pause">
+          <svg id="iconPause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>
+          <svg id="iconPlay" class="hidden" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+        </button>
+        <button id="btnMute" class="icon-btn" type="button" aria-label="Mute" title="Mute">
+          <svg id="iconSound" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <svg id="iconMuted" class="hidden" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M18 9l-6 6M12 9l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+        <button id="btnRestart" class="icon-btn" type="button" aria-label="Restart" title="Restart">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7.2 7.2a7 7 0 1 1-1.1 8.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M3.5 3.8v5.4h5.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="wallet">
+      <div class="wallet-main">
+        <div class="wallet-top">
+          <span class="wallet-label">Nest egg</span>
+          <b id="nickTag" class="nick-tag hidden"></b>
+        </div>
+        <b id="balance">$1,000.00</b>
+      </div>
+      <div id="livePnl" class="live-pnl hidden">
+        <span>This hoot</span>
+        <b id="openPnl">+$0.00</b>
+      </div>
+    </section>
+
+    <main id="arena" class="arena">
+      <div id="chart"></div>
+      <div id="liveFx" class="live-fx" aria-hidden="true">
+        <div id="liveGlow" class="live-glow"></div>
+      </div>
+      <div id="fx" class="fx" aria-hidden="true"></div>
+      <div class="chart-chip">
+        <span id="priceNow">-</span>
+        <span id="timeNow">-</span>
+      </div>
+      <div id="rulePill" class="rule-pill"></div>
+      <div id="loader" class="overlay">
+        <div class="loader-card">
+          <div class="owl-head big">
+            <img src="owl.png" alt="" />
+          </div>
+          <p id="loaderText">Waking the owl...</p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="pad">
+      <div id="tradeActions" class="actions">
+        <button id="btnBuy" class="btn buy" type="button"><span>▲ BUY</span></button>
+        <button id="btnSell" class="btn sell" type="button"><span>▼ SELL</span></button>
+      </div>
+      <button id="btnClose" class="btn cash hidden" type="button" disabled>
+        <span>CASH OUT</span>
+        <b id="closePnl"></b>
+      </button>
+    </footer>
+
+    <dialog id="nickDialog">
+      <div class="owl-head dialog-owl"><img src="owl.png" alt="" /></div>
+      <h2>Who's hooting?</h2>
+      <p>The owl already named you. Keep it… or shuffle for a worse one.</p>
+      <input id="nickInput" type="text" maxlength="20" placeholder="Your nickname" autocomplete="off" enterkeyhint="done" />
+      <div class="dialog-row">
+        <button id="btnShuffle" class="btn ghost" type="button"><span>Shuffle</span></button>
+        <button id="btnNick" class="btn buy" type="button"><span>That's me!</span></button>
+      </div>
+    </dialog>
+
+    <dialog id="resetDialog">
+      <div class="owl-head dialog-owl"><img src="owl.png" alt="" /></div>
+      <h2>Empty nest!</h2>
+      <p>Your nest egg dropped below $50. Stuff it back to $1,000 and keep hooting?</p>
+      <button id="btnReset" class="btn buy" type="button"><span>Fill the nest!</span></button>
+    </dialog>
+
+    <dialog id="restartDialog">
+      <div class="owl-head dialog-owl"><img src="owl.png" alt="" /></div>
+      <h2>Start over?</h2>
+      <p>Back to the first candle and a fresh $1,000 nest egg. All progress flies away!</p>
+      <div class="dialog-row">
+        <button id="btnRestartNo" class="btn ghost" type="button"><span>Keep going</span></button>
+        <button id="btnRestartYes" class="btn sell" type="button"><span>Restart</span></button>
+      </div>
+    </dialog>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
