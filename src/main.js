@@ -3,6 +3,9 @@ import { createChart, CrosshairMode, LineStyle, ColorType } from 'lightweight-ch
 import { loadCandles, loadState, saveState, loadNick, saveNick } from './storage.js';
 import { CONFIG, newState, openPosition, checkExit, pnlAt, riskAmount, tpDistance } from './game.js';
 import * as sfx from './sfx.js';
+import { initAnalytics, trackEvent } from './analytics.js';
+
+initAnalytics();
 
 const $ = (id) => document.getElementById(id);
 const money = (n, sign = false) => {
@@ -348,19 +351,38 @@ function closePosition(price, reason) {
   spawnPnlFx(pnl, reason);
   flashBalance(pnl);
   playCloseSound(pnl, reason);
+  trackEvent('trade_close', {
+    exit_reason: reason,
+    side: p.side,
+    pnl: +pnl.toFixed(2),
+    balance: state.balance,
+    trade_count: state.trades.length,
+    candle_index: state.index,
+  });
   checkBalance();
 }
 
 function checkBalance() {
   if (state.balance < CONFIG.minBalance) {
     pause();
-    if (!$('resetDialog').open) $('resetDialog').showModal();
+    if (!$('resetDialog').open) {
+      trackEvent('nest_empty', {
+        balance: state.balance,
+        trade_count: state.trades.length,
+        candle_index: state.index,
+      });
+      $('resetDialog').showModal();
+    }
   }
 }
 
 function step() {
   if (state.index >= candles.length) {
     pause();
+    trackEvent('demo_complete', {
+      balance: state.balance,
+      trade_count: state.trades.length,
+    });
     const pop = document.createElement('div');
     pop.className = 'pnl-pop win';
     pop.innerHTML = '<span class="quip">THE END!</span><b>Restart?</b>';
@@ -423,6 +445,7 @@ function submitNick() {
   }
   saveNick(nick);
   applyNick(nick);
+  trackEvent('nickname_set', { nickname_length: nick.length });
   sfx.win();
   $('nickDialog').close();
   play();
@@ -431,9 +454,13 @@ function submitNick() {
 function play() {
   if (timer || $('resetDialog').open || $('restartDialog').open || $('nickDialog').open) return;
   timer = setInterval(step, CONFIG.tickMs);
+  trackEvent('session_play', { candle_index: state.index, balance: state.balance });
   updateUI();
 }
 function pause() {
+  if (timer) {
+    trackEvent('session_pause', { candle_index: state.index, balance: state.balance });
+  }
   clearInterval(timer);
   timer = null;
   if (candles.length) updateUI();
@@ -443,6 +470,7 @@ function trade(side) {
   if (state.position) return;
   const res = openPosition(side, current().close, state.balance, current().time);
   if (res.error) {
+    trackEvent('trade_open_failed', { side, balance: state.balance, error: res.error });
     sfx.error();
     spawnPnlFx(-1, 'ERR');
     const pop = $('fx').lastElementChild;
@@ -455,6 +483,12 @@ function trade(side) {
   }
   side === 'buy' ? sfx.buy() : sfx.sell();
   state.position = res.position;
+  trackEvent('trade_open', {
+    side,
+    entry_price: res.position.entry,
+    balance: state.balance,
+    candle_index: state.index,
+  });
   drawLines();
   persist();
   updateUI();
@@ -489,24 +523,49 @@ $('btnBuy').onclick = () => trade('buy');
 $('btnSell').onclick = () => trade('sell');
 $('btnClose').onclick = () => { closePosition(current().close, 'MANUAL'); persist(); updateUI(); };
 $('btnPlay').onclick = () => { sfx.click(); timer ? pause() : play(); };
-$('btnMute').onclick = () => { sfx.setMuted(!sfx.isMuted()); if (!sfx.isMuted()) sfx.click(); setMuteUi(); };
-$('btnReset').onclick = () => { $('resetDialog').close(); sfx.win(); resetAccount(); play(); };
+$('btnMute').onclick = () => {
+  sfx.setMuted(!sfx.isMuted());
+  trackEvent('sound_toggle', { muted: sfx.isMuted() });
+  if (!sfx.isMuted()) sfx.click();
+  setMuteUi();
+};
+$('btnReset').onclick = () => {
+  $('resetDialog').close();
+  trackEvent('nest_refill', { trade_count: state.trades.length, candle_index: state.index });
+  sfx.win();
+  resetAccount();
+  play();
+};
 $('btnNick').onclick = () => submitNick();
-$('btnShuffle').onclick = () => { sfx.click(); fillSuggestedNick(); };
+$('btnShuffle').onclick = () => { sfx.click(); fillSuggestedNick(); trackEvent('nickname_shuffle'); };
 $('nickInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNick(); });
 $('nickDialog').addEventListener('cancel', (e) => e.preventDefault());
 $('resetDialog').addEventListener('cancel', (e) => e.preventDefault());
-$('btnRestart').onclick = () => { pause(); $('restartDialog').showModal(); };
-$('btnRestartNo').onclick = () => { $('restartDialog').close(); play(); };
+$('btnRestart').onclick = () => {
+  pause();
+  trackEvent('run_restart_prompt', { balance: state.balance, trade_count: state.trades.length });
+  $('restartDialog').showModal();
+};
+$('btnRestartNo').onclick = () => {
+  $('restartDialog').close();
+  trackEvent('run_restart_cancel');
+  play();
+};
 $('btnRestartYes').onclick = () => {
   $('restartDialog').close();
+  trackEvent('run_restart_confirm', { balance: state.balance, trade_count: state.trades.length });
   pause();
   state = newState();
   persist();
   renderAll();
   play();
 };
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    trackEvent('tab_hidden', { candle_index: state.index });
+    pause();
+  }
+});
 document.addEventListener('pointerdown', () => sfx.unlock(), { once: true });
 chart.timeScale().subscribeVisibleLogicalRangeChange(() => updateLiveGlow());
 window.addEventListener('resize', () => {
@@ -527,6 +586,12 @@ window.addEventListener('resize', () => {
   if (saved && saved.index >= 1 && saved.index <= candles.length) state = saved;
   $('loader').classList.add('hidden');
   renderAll();
+  trackEvent('game_ready', {
+    candle_count: candles.length,
+    resumed: Boolean(saved && saved.index >= 1 && saved.index <= candles.length),
+    candle_index: state.index,
+    balance: state.balance,
+  });
   const nick = loadNick();
   applyNick(nick);
   if (!nick) {
