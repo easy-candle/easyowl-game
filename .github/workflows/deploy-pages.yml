@@ -26,7 +26,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
         env:
-          GA_ID: ${{ secrets.GA_ID }}
+          GA_ID: ${{ vars.GA_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
